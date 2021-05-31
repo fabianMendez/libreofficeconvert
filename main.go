@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -79,8 +80,7 @@ func respondWith(w http.ResponseWriter, statusCode int, message string) {
 func convertHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.Method, r.URL)
 
-	q := r.URL.Query()
-	extension := q.Get("extension")
+	extension := path.Base(r.URL.Path)
 
 	if extension == "" {
 		respondWith(w, http.StatusBadRequest, "destination extension is required")
