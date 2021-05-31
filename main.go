@@ -44,8 +44,7 @@ func convert(src io.Reader, dst io.Writer, extension string) error {
 		libreofficePath = "libreoffice"
 	}
 
-	cmd := exec.Command(libreofficePath, "--headless", "--convert-to", extension, "--outdir", tmpDir, filepath.Base(srcFilename))
-	cmd.Dir = tmpDir
+	cmd := exec.Command(libreofficePath, "--headless", "--convert-to", extension, "--outdir", tmpDir, srcFilename)
 	log.Println(cmd)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -54,8 +53,8 @@ func convert(src io.Reader, dst io.Writer, extension string) error {
 		return fmt.Errorf("executing command: %s - %w", cmd.String(), err)
 	}
 
-	srcBasename := strings.TrimSuffix(srcFilename, filepath.Ext(srcFilename))
-	dstFilename := srcBasename + "." + extension
+	srcCleanname := strings.TrimSuffix(srcFilename, filepath.Ext(srcFilename))
+	dstFilename := srcCleanname + "." + extension
 	log.Println("Destination filename:", dstFilename)
 
 	dstFile, err := os.Open(dstFilename)
