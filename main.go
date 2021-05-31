@@ -19,13 +19,13 @@ func convert(src io.Reader, dst io.Writer, srcExtension, dstExtension string) er
 	}
 	log.Println("Created temp directory:", tmpDir)
 
-	// defer func() {
-	// 	err = os.RemoveAll(tmpDir)
-	// 	if err != nil {
-	// 		log.Printf("deleting temp directory: %v\n", err)
-	// 	}
-	// 	log.Println("Deleted temp directory:", tmpDir)
-	// }()
+	defer func() {
+		err = os.RemoveAll(tmpDir)
+		if err != nil {
+			log.Printf("deleting temp directory: %v\n", err)
+		}
+		log.Println("Deleted temp directory:", tmpDir)
+	}()
 
 	srcFilename := filepath.Join(tmpDir, "src"+"."+srcExtension)
 	srcFile, err := os.OpenFile(srcFilename, os.O_CREATE|os.O_WRONLY, os.ModePerm)
@@ -72,7 +72,7 @@ func convert(src io.Reader, dst io.Writer, srcExtension, dstExtension string) er
 
 	_, err = io.Copy(dst, dstFile)
 	if err != nil {
-		return fmt.Errorf("could copy jar file: %w", err)
+		return fmt.Errorf("could copy destination file: %w", err)
 	}
 
 	return nil
