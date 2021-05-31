@@ -7,12 +7,11 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 )
 
-func convert(src io.Reader, dst io.Writer, srcExtension, dstExtension string) error {
+func convert(src io.Reader, dst io.Writer, extension string) error {
 	tmpDir, err := os.MkdirTemp(os.TempDir(), "*")
 	if err != nil {
 		return fmt.Errorf("creating temp dir: %w", err)
@@ -27,23 +26,17 @@ func convert(src io.Reader, dst io.Writer, srcExtension, dstExtension string) er
 		log.Println("Deleted temp directory:", tmpDir)
 	}()
 
-	srcFilename := filepath.Join(tmpDir, "src"+"."+srcExtension)
+	srcFilename := filepath.Join(tmpDir, "src")
 	srcFile, err := os.OpenFile(srcFilename, os.O_CREATE|os.O_WRONLY, os.ModePerm)
-	// srcFile, err := os.CreateTemp("", "*."+srcExtension)
 	if err != nil {
-		return fmt.Errorf("could create temp file: %w", err)
+		return fmt.Errorf("could not create temp file: %w", err)
 	}
 	defer srcFile.Close()
 	log.Println("Source filename:", srcFilename)
 
 	_, err = io.Copy(srcFile, src)
 	if err != nil {
-		return fmt.Errorf("could copy source file: %w", err)
-	}
-
-	err = srcFile.Close()
-	if err != nil {
-		return fmt.Errorf("could not cloud source file: %w", err)
+		return fmt.Errorf("could not copy source file: %w", err)
 	}
 
 	libreofficePath := os.Getenv("LIBREOFFICE_PATH")
@@ -51,7 +44,7 @@ func convert(src io.Reader, dst io.Writer, srcExtension, dstExtension string) er
 		libreofficePath = "libreoffice"
 	}
 
-	cmd := exec.Command(libreofficePath, "--headless", "--convert-to", dstExtension, "--outdir", tmpDir, filepath.Base(srcFilename))
+	cmd := exec.Command(libreofficePath, "--headless", "--convert-to", extension, "--outdir", tmpDir, filepath.Base(srcFilename))
 	cmd.Dir = tmpDir
 	log.Println(cmd)
 	cmd.Stdout = os.Stdout
@@ -62,7 +55,7 @@ func convert(src io.Reader, dst io.Writer, srcExtension, dstExtension string) er
 	}
 
 	srcBasename := strings.TrimSuffix(srcFilename, filepath.Ext(srcFilename))
-	dstFilename := srcBasename + "." + dstExtension
+	dstFilename := srcBasename + "." + extension
 	log.Println("Destination filename:", dstFilename)
 
 	dstFile, err := os.Open(dstFilename)
@@ -72,7 +65,7 @@ func convert(src io.Reader, dst io.Writer, srcExtension, dstExtension string) er
 
 	_, err = io.Copy(dst, dstFile)
 	if err != nil {
-		return fmt.Errorf("could copy destination file: %w", err)
+		return fmt.Errorf("could not copy destination file: %w", err)
 	}
 
 	return nil
@@ -87,9 +80,10 @@ func respondWith(w http.ResponseWriter, statusCode int, message string) {
 func convertHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.Method, r.URL)
 
-	dstExtension := r.FormValue("extension")
+	q := r.URL.Query()
+	extension := q.Get("extension")
 
-	if dstExtension == "" {
+	if extension == "" {
 		respondWith(w, http.StatusBadRequest, "destination extension is required")
 		return
 	}
@@ -105,14 +99,7 @@ func convertHandler(w http.ResponseWriter, r *http.Request) {
 		os.Remove(tmpfile.Name())
 	}()
 
-	f, h, err := r.FormFile("file")
-	if err != nil {
-		log.Println(err)
-		respondWith(w, http.StatusBadRequest, "could not read source file")
-		return
-	}
-
-	err = convert(f, tmpfile, path.Ext(h.Filename), dstExtension)
+	err = convert(r.Body, tmpfile, extension)
 	if err != nil {
 		log.Println(err)
 		respondWith(w, http.StatusInternalServerError, "could not generate library")
