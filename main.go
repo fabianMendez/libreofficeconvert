@@ -74,7 +74,7 @@ func convert(src io.Reader, dst io.Writer, extension string) error {
 func respondWith(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	w.Write([]byte(`{"error" "` + message + `"}`))
+	w.Write([]byte(`{"error": "` + message + `"}`))
 }
 
 func convertHandler(w http.ResponseWriter, r *http.Request) {
