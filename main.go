@@ -115,8 +115,23 @@ func convertHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func cors(fn func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+			w.Header().Set("Access-Control-Allow-Methods", "POST")
+			w.Header().Set("Access-Control-Max-Age", "3600")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		fn(w, r)
+	}
+}
+
 func main() {
-	http.HandleFunc("/", convertHandler)
+	http.HandleFunc("/", cors(convertHandler))
 
 	port := os.Getenv("PORT")
 	if port == "" {
